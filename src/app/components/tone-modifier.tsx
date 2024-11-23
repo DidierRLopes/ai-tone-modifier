@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Textarea } from "@/components/ui/textarea";
 import { AlertCircle, X } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { modifyText } from "../actions";
 
 type Feature = {
@@ -16,45 +16,70 @@ type Feature = {
 	value: number;
 };
 
+const FEATURES_STORAGE_KEY = "tone-modifier-features";
+
+const DEFAULT_FEATURES: Feature[] = [
+	{ name: "Clarity", value: 90 },
+	{ name: "Simplicity", value: 40 },
+	{ name: "Friendliness", value: 100 },
+	{ name: "Helpfulness", value: 70 },
+];
+
 export function ToneModifier() {
 	const [prompt, setPrompt] = useState("");
 	const [result, setResult] = useState("");
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
-	const [features, setFeatures] = useState<Feature[]>([
-		{ name: "Clarity", value: 90 },
-		{ name: "Simplicity", value: 40 },
-		{ name: "Friendliness", value: 100 },
-		{ name: "Helpfulness", value: 70 },
-	]);
+	const [features, setFeatures] = useState<Feature[]>(DEFAULT_FEATURES);
+	const [isLoading, setIsLoading] = useState(true); // Add loading state
 	const [apiKey, setApiKey] = useState("");
 	const [newFeatureName, setNewFeatureName] = useState("");
 
+	useEffect(() => {
+		const stored = localStorage.getItem(FEATURES_STORAGE_KEY);
+		if (stored) {
+			setFeatures(JSON.parse(stored));
+		}
+		setIsLoading(false);
+	}, []);
+
 	const handleFeatureChange = (index: number, newValue: number[]) => {
-		setFeatures((prev) =>
-			prev.map((feature, i) =>
+		setFeatures((prev) => {
+			const newFeatures = prev.map((feature, i) =>
 				i === index ? { ...feature, value: newValue[0] } : feature,
-			),
-		);
+			);
+			localStorage.setItem(FEATURES_STORAGE_KEY, JSON.stringify(newFeatures));
+			return newFeatures;
+		});
 	};
 
 	const handleFeatureNameChange = (index: number, newName: string) => {
-		setFeatures((prev) =>
-			prev.map((feature, i) =>
+		setFeatures((prev) => {
+			const newFeatures = prev.map((feature, i) =>
 				i === index ? { ...feature, name: newName } : feature,
-			),
-		);
+			);
+			localStorage.setItem(FEATURES_STORAGE_KEY, JSON.stringify(newFeatures));
+			return newFeatures;
+		});
 	};
 
 	const addNewFeature = () => {
 		if (newFeatureName.trim()) {
-			setFeatures((prev) => [...prev, { name: newFeatureName, value: 50 }]);
+			setFeatures((prev) => {
+				const newFeatures = [...prev, { name: newFeatureName, value: 50 }];
+				localStorage.setItem(FEATURES_STORAGE_KEY, JSON.stringify(newFeatures));
+				return newFeatures;
+			});
 			setNewFeatureName("");
 		}
 	};
 
 	const removeFeature = (index: number) => {
-		setFeatures((prev) => prev.filter((_, i) => i !== index));
+		setFeatures((prev) => {
+			const newFeatures = prev.filter((_, i) => i !== index);
+			localStorage.setItem(FEATURES_STORAGE_KEY, JSON.stringify(newFeatures));
+			return newFeatures;
+		});
 	};
 
 	const handleSubmit = async (e: React.FormEvent) => {
@@ -99,7 +124,9 @@ export function ToneModifier() {
 					</div>
 
 					{/* Custom Features */}
-					<div className="space-y-6">
+					<div
+						className={`space-y-6 transition-opacity duration-300 ${isLoading ? "opacity-0" : "opacity-100"}`}
+					>
 						<h3 className="text-xl font-medium">Custom Features</h3>
 						<div className="space-y-4 rounded-lg bg-secondary/50 p-4">
 							{features.map((feature, index) => (
@@ -167,7 +194,7 @@ export function ToneModifier() {
 								features.length === 0
 							}
 						>
-							{loading ? "Modifying..." : "Modify Text"}
+							{loading ? "Modifying..." : "Update Text Tone"}
 						</Button>
 					</form>
 
